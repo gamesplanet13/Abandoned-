@@ -47,6 +47,10 @@
       padding: 5px 10px;
       cursor: pointer;
     }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -66,7 +70,6 @@
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // Find the header row with "Customer Name" and "Mobile Number"
         let headerIndex = -1;
         for (let i = 0; i < rows.length; i++) {
           if (rows[i].includes("Customer Name") && rows[i].includes("Mobile Number")) {
@@ -95,9 +98,10 @@
             if (mobile.length >= 12) {
               const div = document.createElement("div");
               div.className = "entry";
+              const btnId = `btn_${i}`;
               div.innerHTML = `
                 <span>${name} - ${mobile}</span>
-                <button onclick="sendMessage('${mobile}')">Send</button>
+                <button id="${btnId}" onclick="sendMessage('${mobile}', '${btnId}')">Send</button>
               `;
               outputDiv.appendChild(div);
             }
@@ -112,9 +116,12 @@
       reader.readAsArrayBuffer(file);
     }
 
-    function sendMessage(number) {
+    function sendMessage(number, buttonId) {
       const msg = encodeURIComponent(document.getElementById("messageBox").value.trim());
       if (!msg) return alert("Please type a message first");
+
+      const btn = document.getElementById(buttonId);
+      btn.disabled = true;
       window.open(`https://wa.me/${number}?text=${msg}`, "_blank");
     }
   </script></body>
