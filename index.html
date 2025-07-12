@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WhatsApp Message Sender</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    h2 { margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    button { padding: 6px 12px; cursor: pointer; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h2>Upload Excel File</h2>
+  <input type="file" id="excelFile" accept=".xlsx,.xls" />
+  <table id="outputTable">
+    <thead>
+      <tr><th>Name</th><th>Mobile</th><th>Message</th><th>Send</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>  <script>
+    document.getElementById('excelFile').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        const tbody = document.querySelector('#outputTable tbody');
+        tbody.innerHTML = '';
+
+        json.forEach((row, index) => {
+          const name = row.Name || row.name || '';
+          const mobile = ('' + (row.Mobile || row.mobile || '')).replace(/\D/g, '').replace(/^0/, '');
+          const msg = `Hello ${name} ji, Buy amazing gaming products from Games Planet! Choose Best. Buy Best. Deals are waiting for you. Check out our latest game products https://youtu.be/IkkCb4FmIBA?si=Af1iBpoQm9Hx5SE7`;
+          const encodedMsg = encodeURIComponent(msg);
+          const whatsappUrl = `https://wa.me/91${mobile}?text=${encodedMsg}`;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${name}</td>
+            <td>${mobile}</td>
+            <td>${msg}</td>
+            <td><button onclick="sendMsg(this, '${whatsappUrl}')">Send</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function sendMsg(button, url) {
+      window.open(url, '_blank');
+      button.disabled = true;
+      button.innerText = 'Sent';
+    }
+  </script></body>
+</html>
