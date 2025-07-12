@@ -1,129 +1,156 @@
 <!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Abandoned Cart WhatsApp Sender</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
-    h2 { margin-bottom: 10px; }
-    textarea { width: 100%; height: 100px; margin-bottom: 15px; font-size: 14px; }
-    input[type='file'] { margin-bottom: 10px; }
-    button { padding: 6px 12px; cursor: pointer; border: none; background: #25D366; color: white; border-radius: 4px; margin: 5px 5px 10px 0; }
-    button:disabled { background-color: #ccc; cursor: not-allowed; }
-    #progressContainer { width: 100%; background: #ddd; border-radius: 5px; margin-bottom: 15px; display: none; }
-    #progressBar { width: 0%; height: 20px; background: #25D366; border-radius: 5px; text-align: center; color: white; line-height: 20px; font-size: 12px; }
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h2 {
+      text-align: center;
+    }
+    input[type="file"], textarea {
+      margin-bottom: 10px;
+      display: block;
+      width: 100%;
+    }
+    .progress {
+      width: 100%;
+      background: #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 20px;
+      background: green;
+      text-align: center;
+      color: white;
+      border-radius: 5px;
+    }
+    .entry {
+      background: #fff;
+      padding: 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .entry span {
+      font-weight: bold;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
-  <h2>📤 Upload Abandoned Cart Excel</h2>
-  <textarea id="customMessage" placeholder="✍️ Paste your WhatsApp message here... Use ${name} to insert customer name."></textarea>
-  <br>
-  <input type="file" id="excelFile" accept=".xlsx,.xls" />
-  <button onclick="generateMessages()">🔄 Generate Messages</button>
-  <button onclick="clearSentHistory()">🧹 Clear Sent History</button>
-  <div id="progressContainer">
-    <div id="progressBar">0%</div>
-  </div>
-  <table id="outputTable">
-    <thead>
-      <tr><th>Name</th><th>Mobile</th><th>Send</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>  <script>
-    let fileData;
-    const SENT_KEY = 'sent_whatsapp_numbers';
-    let sentNumbers = JSON.parse(localStorage.getItem(SENT_KEY) || '[]');
+  <h2>📤 Abandoned Cart WhatsApp Sender</h2>  <input type="file" id="excelFile" accept=".xlsx" />
+  <textarea id="messageBox" rows="5" placeholder="Paste your message here..."></textarea>
+  <button onclick="generateList()">Generate</button>
+  <button onclick="resetSettings()" style="margin-top: 10px; background: crimson; color: white;">Clear Sent Record</button>  <div class="progress">
+    <div class="progress-bar" id="progressBar">0%</div>
+  </div>  <div id="output"></div>  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>  <script>
+    let sentNumbers = JSON.parse(localStorage.getItem("sentNumbers") || "{}");
 
-    document.getElementById('excelFile').addEventListener('change', function (e) {
-      fileData = e.target.files[0];
-    });
-
-    function clearSentHistory() {
-      localStorage.removeItem(SENT_KEY);
-      sentNumbers = [];
-      alert('✅ Sent history cleared! Please regenerate the table.');
+    function saveSent(number) {
+      sentNumbers[number] = true;
+      localStorage.setItem("sentNumbers", JSON.stringify(sentNumbers));
     }
 
-    function generateMessages() {
-      const userMsg = document.getElementById('customMessage').value.trim();
-      if (!userMsg) return alert("Please paste your WhatsApp message.");
-      if (!fileData) return alert("Please upload an Excel file.");
-
-      const reader = new FileReader();
-      document.getElementById('progressContainer').style.display = 'block';
-      updateProgress(0);
-
-      reader.onload = function (event) {
-        updateProgress(10);
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-        updateProgress(30);
-        const tbody = document.querySelector('#outputTable tbody');
-        tbody.innerHTML = '';
-
-        const total = json.length;
-        let current = 0;
-        const batchSize = 100;
-
-        function processBatch() {
-          const fragment = document.createDocumentFragment();
-
-          for (let i = 0; i < batchSize && current < total; i++, current++) {
-            const row = json[current];
-            let name = row['Customer Name'] || row['Name'] || "Customer";
-            let mobile = ('' + (row['Mobile Number'] || row['Alternate Mobile Number'] || '')).replace(/\D/g, '').replace(/^0/, '');
-            if (!mobile || mobile.length < 10) continue;
-
-            const msg = userMsg.replace(/\$\{name\}/gi, name);
-            const encodedMsg = encodeURIComponent(msg);
-            const whatsappUrl = `https://wa.me/91${mobile}?text=${encodedMsg}`;
-
-            const isSent = sentNumbers.includes(mobile);
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${name}</td>
-              <td>${mobile}</td>
-              <td><button ${isSent ? 'disabled' : ''} onclick="sendMsg(this, '${whatsappUrl}', '${mobile}')">${isSent ? 'Sent' : 'Send'}</button></td>
-            `;
-            fragment.appendChild(tr);
-          }
-
-          tbody.appendChild(fragment);
-          updateProgress(30 + Math.round((70 * current) / total));
-
-          if (current < total) {
-            setTimeout(processBatch, 10);
-          } else {
-            updateProgress(100);
-          }
-        }
-
-        processBatch();
-      };
-
-      reader.readAsArrayBuffer(fileData);
+    function hasSent(number) {
+      return sentNumbers[number];
     }
 
-    function sendMsg(button, url, mobile) {
-      window.open(url, '_blank');
-      button.disabled = true;
-      button.innerText = 'Sent';
-
-      if (!sentNumbers.includes(mobile)) {
-        sentNumbers.push(mobile);
-        localStorage.setItem(SENT_KEY, JSON.stringify(sentNumbers));
+    function resetSettings() {
+      if (confirm("Are you sure you want to clear sent message history?")) {
+        localStorage.removeItem("sentNumbers");
+        location.reload();
       }
     }
 
-    function updateProgress(percent) {
-      const bar = document.getElementById('progressBar');
-      bar.style.width = percent + '%';
-      bar.innerText = percent + '%';
+    function generateList() {
+      const file = document.getElementById("excelFile").files[0];
+      if (!file) return alert("Please upload a file first");
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+        let headerIndex = -1;
+        for (let i = 0; i < rows.length; i++) {
+          if (rows[i].includes("Customer Name") && rows[i].includes("Mobile Number")) {
+            headerIndex = i;
+            break;
+          }
+        }
+
+        if (headerIndex === -1) return alert("Couldn't find headers in file");
+
+        const headers = rows[headerIndex];
+        const nameIndex = headers.indexOf("Customer Name");
+        const mobileIndex = headers.indexOf("Mobile Number");
+
+        const outputDiv = document.getElementById("output");
+        outputDiv.innerHTML = "";
+
+        const total = rows.length - headerIndex - 1;
+
+        rows.slice(headerIndex + 1).forEach((row, i) => {
+          setTimeout(() => {
+            const name = row[nameIndex] || "Customer";
+            let mobile = (row[mobileIndex] || "").replace(/[^0-9]/g, "");
+            if (mobile.length === 10) mobile = "91" + mobile;
+
+            if (mobile.length >= 12) {
+              const div = document.createElement("div");
+              div.className = "entry";
+              const btnId = `btn_${i}`;
+              const alreadySent = hasSent(mobile);
+              div.innerHTML = `
+                <span>${name} - ${mobile}</span>
+                <button id="${btnId}" ${alreadySent ? "disabled" : ""}>${alreadySent ? "Sent" : "Send"}</button>
+              `;
+              if (!alreadySent) {
+                div.querySelector("button").onclick = function () {
+                  sendMessage(mobile, btnId);
+                };
+              }
+              outputDiv.appendChild(div);
+            }
+
+            let percent = Math.floor(((i + 1) / total) * 100);
+            document.getElementById("progressBar").style.width = percent + "%";
+            document.getElementById("progressBar").innerText = percent + "%";
+          }, i * 50);
+        });
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function sendMessage(number, buttonId) {
+      const msg = encodeURIComponent(document.getElementById("messageBox").value.trim());
+      if (!msg) return alert("Please type a message first");
+
+      const btn = document.getElementById(buttonId);
+      btn.disabled = true;
+      btn.innerText = "Sent";
+      saveSent(number);
+
+      window.open(`https://wa.me/${number}?text=${msg}`, "_blank");
     }
   </script></body>
 </html>
